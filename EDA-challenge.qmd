@@ -1,0 +1,151 @@
+---
+title: "EDA-challenge"
+author: "Sai Tokmurzina"
+format: html
+editor: visual
+---
+
+## Preliminaries
+
+```{r}
+library(tidyverse)
+```
+
+```{r}
+f <- "https://raw.githubusercontent.com/difiore/ada-datasets/refs/heads/main/data-wrangling.csv"
+d <- read_csv(f, col_names = TRUE)
+names(d)
+```
+
+# STEP1:
+
+## 1-3
+
+### Creating variables **BSD** (body size dimorphism), **sex_ratio** and **DI** (defensibility index)
+
+#### for DI, home range area was used to find home range diameter
+
+```{r}
+d <- d |>
+  mutate(BSD = Body_mass_male_mean / Body_mass_female_mean,
+         sex_ratio = AdultFemale / AdultMales)
+r <- sqrt(d$HomeRange_km2 / pi)
+d <- d |>
+  mutate(DI = DayLength_km / 2*r)
+```
+
+## 4
+
+### Creating a scatterplot to evaluate the relationship b/w **day range length (y)** and **time spent moving (x)** for the *overall* population
+
+```{r}
+p <- ggplot(d, 
+            aes(x = log(Move), y = log(DayLength_km))
+            ) +
+  geom_point(na.rm = TRUE)
+p <- p + xlab("log(Time spent moving)") + ylab("log(Day range length)")
+p
+```
+
+### Creating a scatterplot to evaluate the relationship b/w **day range length (y)** and **time spent moving (x**) *by Family*
+
+```{r}
+p <- ggplot(d, 
+            aes(x = log(Move), y = log(DayLength_km))
+            ) +
+  geom_point(na.rm = TRUE) +
+  facet_wrap(~Family)
+p <- p + xlab("log(Time spent moving)") + ylab("log(Day range length)")
+p
+```
+
+#### I don't see a clear relationship b/w time moving and distance traveled for the overall data and any primate families. I think it's good to transform numerical values with log to understand relative differences and make data look better, especially when comparing different Families. Although, here not super required as we just need to see an overall trend per Family, but I prefer transforming
+
+## 5
+
+### Creating a scatterplot to evaluate the relationship b/w **day range length (y)** and **mean group size (x)** for the *overall* population
+
+```{r}
+p <- ggplot(d, 
+            aes(x = log(MeanGroupSize), y = log(DayLength_km))
+) +
+  geom_point(na.rm = TRUE)
+p
+```
+
+### Creating a scatterplot to evaluate the relationship b/w **day range length (y)** and **mean group size (x)** *by Family*
+
+```{r}
+p <- ggplot(d, 
+            aes(x = log(MeanGroupSize), y = log(DayLength_km))
+) +
+  geom_point(na.rm = TRUE) + facet_wrap(~Family)
+p
+```
+
+#### For the overall data, I start seeing a linear relationship b/w group size and range length, although very-very messy. However, for Families such as Cebidae, Hominidae and Pitheciidae I can clearly tell that bigger group size = longer range. Cercopithecidae also shows a similar trend but with many outliers so looks messy. Likewise, should transform x and y to log values.
+
+## 6
+
+### Creating a scatterplot to evaluate the relationship b/w **canine dimorphism (y)** and **body size dimorphism (x)** for the *overall* population
+
+```{r}
+p <- ggplot(d, 
+            aes(x = log(BSD), y = log(Canine_Dimorphism))
+) +
+  geom_point(na.rm = TRUE) 
+p
+```
+
+### Creating a scatterplot to evaluate the relationship b/w **canine dimorphism (y**) and **body size dimorphism (x)** *by Family*
+
+```{r}
+p <- ggplot(d, 
+            aes(x = log(MeanGroupSize), y = log(DayLength_km))
+) +
+  geom_point(na.rm = TRUE) + facet_wrap(~Family)
+p
+```
+
+#### Overall, taxa with greater canine dimorphism show greater body size dimorsphism, especially those in the Cebidae, Hominidae and Pitheciidae Families.
+
+## 7
+
+### Creating a variable **diet_strategy** (frugivore, folivore, omnivore)
+
+```{r}
+d <- d |>
+  mutate(diet_strategy = ifelse(Fruit >= 50, "frugivore", 
+                         ifelse(Leaves >= 50, "folivore",
+                         ifelse(Fruit < 50 & Leaves < 50, "omnivore", 
+                         NA)))
+           )
+```
+
+### Creating a boxplot for diet strategy (x), where "NA" is not shown, and mean group size (y)
+
+```{r}
+p <- ggplot(subset(d, !is.na(diet_strategy)),
+            aes(x = diet_strategy, y = log(MeanGroupSize))
+) +
+  geom_boxplot(na.rm = TRUE)
+p
+```
+#### According to the median value, frugivores live in sliiiightly smaller groups than folivores, but the difference is almost nonexistent. On the other hand, frugivores have a wider spread on the upper and lower quertiles.
+
+## 8
+### Using dplyr verbs and "|>" pipe operator to: 
+### - create a Binomial variable
+### - select only 4 columns
+### - group by Family
+### - calculate avg brain size and avg male body size per Family
+### - arrange data in accending order by avg brain size
+### - print results
+
+```{r}
+d <- d |> mutate(Binomial = paste0(Genus," ", Species)) |> select(Binomial, Family, Brain_Size_Species_Mean, Body_mass_male_mean) |> group_by(Family) |> summarise(Brain_Size_Avg = mean(Brain_Size_Species_Mean, na.rm = TRUE), Body_mass_male_avg = mean(Body_mass_male_mean, na.rm = TRUE)) |> arrange(Brain_Size_Avg) |> print()
+```
+
+
+
+
